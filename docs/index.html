@@ -209,7 +209,7 @@ function render(){
   $("#alerts").innerHTML = probs.length ? probs.map(c => `
     <div class="card alert ${c.state === "warn" ? "warn" : ""}">
       <div><b>${esc(c.name)}</b> <span class="tag ${c.state}">${LABEL[c.state]}</span>
-        <div class="d">${det(c)} &middot; da ${esc(fmt(parseTs(c.since)))}</div></div>
+        <div class="d">${det(c)} &middot; da ${esc(fmt(parseTs(c.since)))}</div>${domLine(c)}</div>
       <a class="wl" href="${esc(c.url)}" target="_blank" rel="noopener">Apri &rarr;</a>
     </div>`).join("") : `<div class="card empty">Tutto online.</div>`;
 
