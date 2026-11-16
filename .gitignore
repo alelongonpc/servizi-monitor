@@ -1,0 +1,11 @@
+__pycache__/
+.DS_Store
+archivio/
+# repo pubblico: mai in chiaro
+services.json
+docs/data/
+site/
+prev.enc.json
+# note e impostazioni locali (nomi di teatri e repo privati): solo in locale
+CLAUDE.md
+.claude/

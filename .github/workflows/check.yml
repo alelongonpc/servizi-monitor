@@ -1,0 +1,57 @@
+name: check-services
+# Repo PUBBLICO: qui ci sono solo file cifrati. services.json e i dati si decifrano solo durante il job
+# (secret SITE_PASSWORD) e il sito pubblicato (ramo gh-pages, una sola commit) contiene solo index.html + data.enc.json.
+# I log sono pubblici: check.py con GITHUB_ACTIONS stampa solo i conteggi.
+on:
+  schedule:
+    # ogni 30 minuti (GitHub puo' ritardare di qualche minuto)
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+concurrency: check
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50  # i nuovi tentativi su un servizio in errore durano 30 min
+    env:
+      SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q cryptography
+      - name: Decifra servizi e dati precedenti
+        run: |
+          git fetch -q --depth 1 origin gh-pages && git show origin/gh-pages:data.enc.json > prev.enc.json || true
+          python monitor/vault.py open-services
+          python monitor/vault.py unpack prev.enc.json
+      - name: Controllo servizi
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: python monitor/check.py
+      - name: Cifra e pubblica (ramo gh-pages, una sola commit, senza storico)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python monitor/vault.py pack site
+          cp docs/index.html site/
+          touch site/.nojekyll
+          cd site
+          git init -q -b gh-pages
+          git config user.name "servizi-bot"
+          git config user.email "servizi-bot@users.noreply.github.com"
+          git add -A
+          git commit -qm "sito $(date -u +%FT%H:%MZ)"
+          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+      - name: Tieni attivo il workflow (GitHub sospende i cron dei repo pubblici dopo 60 giorni senza commit)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/check.yml/enable" --silent
