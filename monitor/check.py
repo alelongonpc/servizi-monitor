@@ -36,7 +36,7 @@ STATUS = DATA / "status.json"
 HISTORY = DATA / "history.csv"
 STATE = DATA / "alert_state.json"
 HIST_FIELDS = ["ts", "id", "state", "ms", "detail"]
-HIST_DAYS = 60
+HIST_DAYS = None  # storico illimitato
 UA = "Mozilla/5.0 ServiziMonitor/1"  # il firewall del sito chiude la connessione agli UA con "compatible;"
 WEBTIC_API = "https://secure.webtic.it/api/wtjsonservices.ashx"
 TZ = ZoneInfo("Europe/Rome")
@@ -223,7 +223,7 @@ def load_json(path, default):
 def save_history(ts, results, now):
     rows = []
     if HISTORY.exists():
-        cutoff = (now - timedelta(days=HIST_DAYS)).strftime("%Y-%m-%dT%H:%MZ")
+        cutoff = (now - timedelta(days=HIST_DAYS)).strftime("%Y-%m-%dT%H:%MZ") if HIST_DAYS else ""
         with HISTORY.open(encoding="utf-8", newline="") as f:
             rows = [r for r in csv.DictReader(f) if r["ts"] >= cutoff]
     rows += [{"ts": ts, "id": r["id"], "state": r["state"], "ms": r["ms"] if r["ms"] is not None else "",

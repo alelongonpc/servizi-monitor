@@ -81,6 +81,17 @@ body.locked main{display:none}body:not(.locked) #gate{display:none}
   .tools{display:none}.tablewrap{overflow:visible}table{min-width:0;font-size:11px}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+
+.xr>td{padding:0;border-top:0}.xb{padding:12px 14px 16px;background:var(--bg);border-top:1px dashed var(--line)}
+.xh{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:13px;color:var(--mut)}.xh .btn{padding:3px 10px;font-size:12px}
+.nm{cursor:pointer;color:var(--acc);font:inherit;background:none;border:0;padding:0;text-align:left}.nm:hover{text-decoration:underline}.nm:before{content:"\25B8";display:inline-block;margin-right:5px;color:var(--mut);transition:transform .15s}.nm[aria-expanded=true]:before{transform:rotate(90deg)}
+.ext{margin-left:6px;color:var(--mut);text-decoration:none;font-size:12px}.ext:hover{color:var(--acc)}
+.av{display:flex;gap:2px;height:70px}.av i{flex:1;min-width:2px;max-width:40px;display:block;border-radius:2px;background:var(--none);position:relative;overflow:hidden}.av i b{position:absolute;left:0;right:0;bottom:0;background:var(--okf)}.av i u{position:absolute;left:0;right:0;top:0;background:var(--bad)}
+.ax{display:flex;justify-content:space-between;font-size:11px;color:var(--mut);margin:3px 0 10px}
+.rt{width:100%;height:60px;display:block;background:var(--card);border:1px solid var(--line);border-radius:6px}.rt polyline{fill:none;stroke:var(--acc);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.xs{font-size:12px;color:var(--mut);margin:4px 0 8px}.xo{font-size:13px;margin:0;padding-left:18px}.xo li{margin:2px 0}
+tr.mr{cursor:pointer}tr.mr:hover td{background:color-mix(in srgb,var(--acc) 5%,transparent)}tr.mr.op td{background:color-mix(in srgb,var(--acc) 8%,transparent)}.xr .xb,.xr .xb *{cursor:auto}.xr .btn{cursor:pointer}
+.goto{cursor:pointer}.goto:hover{border-color:var(--acc)}
 </style>
 </head>
 <body class="locked">
@@ -193,6 +204,59 @@ function strip(h){
   return `<span class="strip">${pad}${last.map(r => `<i class="${r.state}" title="${esc(fmt(parseTs(r.ts)))}: ${LABEL[r.state]}"></i>`).join("")}</span>`;
 }
 
+
+const OPEN = new Set(); let RANGE = 30;
+const dayKey = d => d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+function outages(h){
+  const out = []; let cur = null;
+  for (const r of h) {
+    const t = parseTs(r.ts);
+    if (r.state === "down") { if (!cur) cur = {from: t, to: t}; cur.to = t; }
+    else if (cur) { cur.end = t; out.push(cur); cur = null; }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+function dur(ms){ const m = Math.max(1, Math.round(ms/60000)); return m < 60 ? m + " min" : m < 1440 ? Math.round(m/60) + " h" : Math.round(m/1440) + " g"; }
+function detail(id){
+  const h = HIST[id] || [];
+  if (!h.length) return `<div class="xs">Nessun dato.</div>`;
+  const first = parseTs(h[0].ts), today = new Date(); today.setHours(0,0,0,0);
+  let from = RANGE ? new Date(today.getTime() - (RANGE-1)*864e5) : new Date(first.getFullYear(), first.getMonth(), first.getDate());
+  if (from < new Date(first.getFullYear(), first.getMonth(), first.getDate())) from = new Date(first.getFullYear(), first.getMonth(), first.getDate());
+  const days = [];
+  for (let d = new Date(from); d <= today; d.setDate(d.getDate()+1)) days.push(dayKey(d));
+  const agg = {};
+  for (const r of h) { const k = dayKey(parseTs(r.ts)); const a = agg[k] ||= {n:0, up:0, ms:0, nm:0};
+    a.n++; if (r.state !== "down") a.up++; if (r.state === "ok" && r.ms) { a.ms += +r.ms; a.nm++; } }
+  const fd = k => k.split("-").reverse().join("/");
+  const bars = days.map(k => { const a = agg[k];
+    if (!a) return `<i title="${fd(k)}: nessun dato"></i>`;
+    const p = 100*a.up/a.n;
+    return `<i title="${fd(k)}: ${p.toFixed(p===100?0:1)}% online (${a.n} controlli)"><b style="height:${p}%"></b><u style="height:${100-p}%"></u></i>`; }).join("");
+  const pts = days.map((k,i) => agg[k] && agg[k].nm ? [i, agg[k].ms/agg[k].nm] : null).filter(Boolean);
+  const mx = Math.max(1000, ...pts.map(p => p[1])), n = Math.max(1, days.length-1);
+  const line = pts.length ? `<polyline points="${pts.map(p => (100*p[0]/n).toFixed(2)+","+(58-54*p[1]/mx).toFixed(1)).join(" ")}"/>` : "";
+  const inRange = h.filter(r => days.includes(dayKey(parseTs(r.ts))));
+  const up = inRange.filter(r => r.state !== "down").length;
+  const pct = inRange.length ? (100*up/inRange.length).toFixed(up===inRange.length?0:2) + "%" : "–";
+  const outs = outages(inRange).reverse().slice(0, 10);
+  const lst = outs.length ? `<ol class="xo">${outs.map(o => `<li>${esc(fmt(o.from))} &rarr; ${o.end ? esc(fmt(o.end)) : "<b>in corso</b>"} &middot; ${dur((o.end || new Date()) - o.from)}</li>`).join("")}</ol>` : `<div class="xs">Nessuna interruzione nel periodo.</div>`;
+  const btn = (v, l) => `<button class="btn" data-range="${v}" aria-pressed="${RANGE===v}">${l}</button>`;
+  return `<div class="xh">${btn(7,"7 giorni")}${btn(30,"30 giorni")}${btn(90,"90 giorni")}${btn(0,"Tutto")}<span>Online nel periodo: <b>${pct}</b></span></div>
+    <div class="av">${bars}</div><div class="ax"><span>${fd(days[0])}</span><span>${fd(days[days.length-1])}</span></div>
+    <div class="xs">Tempo medio di risposta giornaliero (max ${(mx/1000).toFixed(1)} s)</div>
+    <svg class="rt" viewBox="0 0 100 60" preserveAspectRatio="none">${line}</svg>
+    <div class="xs" style="margin-top:10px">Interruzioni (ultime 10)</div>${lst}`;
+}
+document.addEventListener("click", e => {
+  const rb = e.target.closest("[data-range]"), tr = e.target.closest("tr.mr"), g = e.target.closest("[data-goto]");
+  if (g && !e.target.closest("a")) { OPEN.clear(); OPEN.add(g.dataset.goto); render();
+    const r = document.querySelector(`tr.mr[data-id="${g.dataset.goto}"]`); if (r) r.scrollIntoView({behavior: "smooth", block: "center"}); }
+  else if (rb) { RANGE = +rb.dataset.range; render(); }
+  else if (tr && !e.target.closest("a,button,.info")) { const id = tr.dataset.id, was = OPEN.has(id); OPEN.clear(); if (!was) OPEN.add(id); render(); }
+});
+
 function render(){
   const {ts, groups, checks} = DATA;
   const t = parseTs(ts), mins = (Date.now() - t) / 60000;
@@ -207,7 +271,7 @@ function render(){
 
   const probs = checks.filter(c => c.state !== "ok").sort((a, b) => RANK[a.state] - RANK[b.state]);
   $("#alerts").innerHTML = probs.length ? probs.map(c => `
-    <div class="card alert ${c.state === "warn" ? "warn" : ""}">
+    <div class="card alert goto ${c.state === "warn" ? "warn" : ""}" data-goto="${esc(c.id)}">
       <div><b>${esc(c.name)}</b> <span class="tag ${c.state}">${LABEL[c.state]}</span>
         <div class="d">${det(c)} &middot; da ${esc(fmt(parseTs(c.since)))}</div>${domLine(c)}</div>
       <a class="wl" href="${esc(c.url)}" target="_blank" rel="noopener">Apri &rarr;</a>
@@ -222,7 +286,7 @@ function render(){
     return `<h2>${esc(gname)} ${bad ? `<span class="tag down">${bad} offline</span>` : ""}</h2>
     <div class="tablewrap"><table>
       <thead><tr><th>Servizio</th><th>Stato</th><th class="hm">Dettaglio</th><th class="num hm c-ms">Risposta</th><th class="num">7 giorni</th><th class="hm c-tr">Andamento</th><th class="hm c-da">Da</th></tr></thead>
-      <tbody>${rows.map(c => `<tr class="${c.state}">
+      <tbody>${rows.map(c => `<tr class="mr ${c.state}${OPEN.has(c.id) ? " op" : ""}" data-id="${esc(c.id)}">
         <td><a class="wl" href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a>
           ${domLine(c)}<span class="sub mb">${det(c)}${info(c)}</span></td>
         <td class="nw"><span class="tag ${c.state}">${LABEL[c.state]}</span></td>
@@ -231,7 +295,7 @@ function render(){
         <td class="num">${uptime(HIST[c.id])}</td>
         <td class="hm c-tr">${strip(HIST[c.id])}</td>
         <td class="hm c-da nw">${esc(fmt(parseTs(c.since)))}</td>
-      </tr>`).join("")}</tbody></table></div>`;
+      </tr>${OPEN.has(c.id) ? `<tr class="xr"><td colspan="7"><div class="xb">${detail(c.id)}</div></td></tr>` : ""}`).join("")}</tbody></table></div>`;
   }).join("");
 }
 
