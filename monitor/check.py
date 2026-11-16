@@ -71,6 +71,8 @@ RANK = {"ok": 0, "warn": 1, "down": 2}
 
 def check_http(s):
     code, body, ms = fetch(s["url"])
+    if s.get("soft") and code in (403, 429, 999):  # il social blocca i controlli automatici: non e' un guasto
+        return "ok", f"HTTP {code}: limita i controlli automatici", ms
     if code >= 400:
         state, detail = "down", f"HTTP {code}"
     elif s.get("contains") and s["contains"] not in body:
