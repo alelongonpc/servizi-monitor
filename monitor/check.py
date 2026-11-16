@@ -54,8 +54,12 @@ def log(msg):
         print(msg, flush=True)
 
 
-def fetch(url, timeout=30):
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept-Language": "it"})
+LIGHT_OK = set()   # servizi "light" con pagina completa letta da poco: ora basta HEAD
+FULL_DONE = set()  # servizi "light" la cui pagina completa e' stata letta in questo giro
+
+
+def fetch(url, timeout=30, method="GET"):
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept-Language": "it"}, method=method)
     t0 = time.monotonic()
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -71,7 +75,18 @@ RANK = {"ok": 0, "warn": 1, "down": 2}
 
 
 def check_http(s):
-    code, body, ms = fetch(s["url"])
+    light = bool(s.get("light"))
+    if light and s["id"] in LIGHT_OK:  # controllo leggero: solo intestazioni, la pagina completa si legge circa 1 volta/ora
+        code, body, ms = fetch(s["url"], method="HEAD")
+        if code >= 400:  # HEAD non basta per decidere: conferma con la pagina completa
+            code, body, ms = fetch(s["url"])
+            FULL_DONE.add(s["id"])
+        else:
+            body = s.get("contains", "")  # contenuto non riletto in questo giro
+    else:
+        code, body, ms = fetch(s["url"])
+        if light:
+            FULL_DONE.add(s["id"])
     if s.get("soft") and code in (403, 429, 999):  # il social blocca i controlli automatici: non e' un guasto
         return "ok", f"HTTP {code}: limita i controlli automatici", ms
     if code >= 400:
@@ -278,6 +293,7 @@ def run_all(services):
 
 def confirm(cands, by_cfg):
     """Ricontrolla i servizi falliti RETRIES volte ogni RETRY_S secondi. Ritorna errori e ultimo esito buono."""
+    LIGHT_OK.clear()  # nei tentativi di conferma si legge sempre la pagina completa
     fails = {i: 1 for i in cands}
     last_ok, last_bad = {}, {}
     nxt = time.monotonic()
@@ -397,7 +413,10 @@ def main():
     ts = now.strftime("%Y-%m-%dT%H:%MZ")
     DATA.mkdir(parents=True, exist_ok=True)
     prev = {c["id"]: c for c in load_json(STATUS, {}).get("checks", [])}
-    svc = load_json(STATE, {}).get("services", {})
+    st = load_json(STATE, {})
+    svc = st.get("services", {})
+    full = st.get("full", {})
+    LIGHT_OK.update(i for i, t in full.items() if now - datetime.strptime(t, "%Y-%m-%dT%H:%MZ").replace(tzinfo=timezone.utc) < timedelta(minutes=55))
     results = run_all(CFG["services"])
     doms = update_domains(CFG["services"], now)
     for r, s in zip(results, CFG["services"]):  # dominio e scadenza (solo testo) per i siti
@@ -419,7 +438,9 @@ def main():
     alert(ev, results, svc, now, "--no-mail" not in sys.argv)
     ids = {s["id"] for s in CFG["services"]}  # dimentica i servizi tolti da services.json
     svc = {i: s for i, s in svc.items() if i in ids and (s.get("status") or s.get("episodes"))}
-    STATE.write_text(json.dumps({"services": svc}, indent=1), encoding="utf-8")
+    full.update({i: ts for i in FULL_DONE})
+    full = {i: t for i, t in full.items() if i in ids}
+    STATE.write_text(json.dumps({"services": svc, "full": full}, indent=1), encoding="utf-8")
     for r in results:
         log(f"{r['state']:>4}  {r['name']}: {r['detail']}")
     count = {s: sum(r["state"] == s for r in results) for s in ("ok", "warn", "down")}
