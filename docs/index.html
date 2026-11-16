@@ -95,6 +95,7 @@ tr.mr{cursor:pointer;scroll-margin-top:16px}tr.mr:hover td{background:color-mix(
 .lg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-bottom:8px}.lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}.lg .g{background:var(--okf)}.lg .r{background:var(--bad)}.lg .n{background:var(--none)}
 .rw{position:relative}.dt{position:absolute;width:8px;height:8px;margin:0 0 -4px -4px;border-radius:50%;background:var(--acc);border:2px solid var(--card);box-sizing:content-box}
 .bi{width:16px;height:16px;margin-right:8px;vertical-align:-3px;flex:none}tr.mr .bi{color:var(--ink)}
+.late{margin-top:6px;padding:6px 10px;border-radius:8px;background:var(--warnbg);color:var(--warn);font-size:13px;display:inline-block}
 </style>
 </head>
 <body class="locked">
@@ -269,7 +270,7 @@ function render(){
   const {ts, groups, checks} = DATA;
   const t = parseTs(ts), mins = (Date.now() - t) / 60000;
   const cls = mins < 75 ? "ok" : mins < 180 ? "warn" : "bad";  // controlli ogni 30 min (+30 min se c'e' da confermare)
-  $("#ageline").innerHTML = `Ultimo controllo: <span class="age ${cls}">${fmt(t)} (${ago(t)})</span>`;
+  $("#ageline").innerHTML = `Ultimo controllo: <span class="age ${cls}">${fmt(t)} (${ago(t)})</span>${mins >= 75 ? `<div class="late">&#9888; Controllo in ritardo: GitHub non ha avviato l&rsquo;esecuzione programmata (succede nei momenti di carico). I dati mostrati potrebbero non essere aggiornati.</div>` : ""}`;
 
   const n = s => checks.filter(c => c.state === s).length;
   $("#kpis").innerHTML = [
