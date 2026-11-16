@@ -2,7 +2,7 @@
 
 AES-256-GCM, chiave = PBKDF2-SHA256(password, monitor/site_salt.txt, 600000 iter), dati compressi gzip
 (stesso formato di Biglietti Monitor, leggibile da WebCrypto nella dashboard).
-Password: variabile SITE_PASSWORD, altrimenti viene chiesta. Richiede `pip install cryptography`.
+Password: variabile SITE_PASSWORD, poi Portachiavi macOS (servizio servizi-monitor), altrimenti viene chiesta. Richiede `pip install cryptography`.
 
 Comandi:
   python monitor/vault.py seal-services     services.json -> services.enc.json (dopo ogni modifica a services.json)
@@ -12,6 +12,7 @@ Comandi:
 """
 import base64
 import getpass
+import subprocess
 import gzip
 import hashlib
 import json
@@ -28,8 +29,18 @@ SALT = bytes.fromhex((Path(__file__).parent / "site_salt.txt").read_text().strip
 FILES = {"status": "status.json", "history": "history.csv", "state": "alert_state.json", "domains": "domains.json"}
 
 
+
+def keychain_pw():
+    """Su macOS: password salvata nel Portachiavi (servizio 'servizi-monitor'), se presente."""
+    try:
+        r = subprocess.run(["security", "find-generic-password", "-s", "servizi-monitor", "-w"],
+                           capture_output=True, text=True, timeout=10)
+        return r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else None
+    except Exception:
+        return None
+
 def key():
-    pw = os.environ.get("SITE_PASSWORD") or getpass.getpass("Password del sito: ")
+    pw = os.environ.get("SITE_PASSWORD") or keychain_pw() or getpass.getpass("Password del sito: ")
     if len(pw) < 8:
         sys.exit("password mancante o troppo corta (minimo 8 caratteri)")
     return hashlib.pbkdf2_hmac("sha256", pw.encode(), SALT, ITER, 32)
