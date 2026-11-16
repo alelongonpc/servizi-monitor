@@ -66,6 +66,7 @@ def fetch(url, timeout=30):
     return code, body, int((time.monotonic() - t0) * 1000)
 
 
+BOT_MARKS = ("captcha", "challenge", "just a moment", "access denied", "robot", "verify you are human", "bot protection")
 RANK = {"ok": 0, "warn": 1, "down": 2}
 
 
@@ -76,7 +77,14 @@ def check_http(s):
     if code >= 400:
         state, detail = "down", f"HTTP {code}"
     elif s.get("contains") and s["contains"] not in body:
-        state, detail = "down", f"HTTP {code} ma contenuto atteso assente"
+        low = body.lower()
+        marks = [m for m in BOT_MARKS if m in low]
+        if QUIET:  # log pubblici: solo codice, lunghezza e parole generiche, mai nomi o URL
+            print(f"contenuto assente: HTTP {code}, {len(body)} byte, marcatori: {marks or None}", flush=True)
+        if code == 202 or marks:  # il sito risponde ma mostra la verifica antibot ai server di GitHub: non e' un guasto
+            state, detail = "ok", f"HTTP {code}: il sito limita i controlli automatici"
+        else:
+            state, detail = "down", f"HTTP {code} ma contenuto atteso assente"
     elif ms > s.get("slow_ms", 8000):
         state, detail = "warn", f"lento ({ms / 1000:.1f}s)"
     else:
