@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Servizi Monitor</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1a1d23;--mut:#6b7280;--line:#e5e7eb;--ok:#15803d;--warn:#b45309;--warnf:#eab308;--bad:#b91c1c;--acc:#2563eb;--okbg:#dcfce7;--warnbg:#fef3c7;--badbg:#fee2e2;--okf:#16a34a;--none:#d1d5db;color-scheme:light}
+:root[data-theme="dark"]{--bg:#0f1217;--card:#181c23;--ink:#e8eaed;--mut:#9aa3af;--line:#2a303a;--ok:#4ade80;--warn:#fbbf24;--warnf:#fbbf24;--bad:#f87171;--acc:#60a5fa;--okbg:#14301f;--warnbg:#3a2a0c;--badbg:#3b1616;--okf:#22c55e;--none:#374151;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:clamp(28px,5vw,44px);line-height:1.15;margin:0}h2{font-size:16px;margin:28px 0 10px}
+.sub{color:var(--mut);font-size:13px;margin-top:2px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--acc)}.btn[aria-pressed=true]{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
+.kpi,.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi b{display:block;font-size:24px}.kpi span{color:var(--mut);font-size:12px}
+.kpi.bad b{color:var(--bad)}.kpi.warn b{color:var(--warn)}.kpi.ok b{color:var(--ok)}
+.alert{border-left:4px solid var(--bad);margin-bottom:8px;display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.alert.warn{border-left-color:var(--warnf)}
+.alert .d{color:var(--mut);font-size:13px}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap}
+.tag.down{background:var(--badbg);color:var(--bad)}.tag.warn{background:var(--warnbg);color:var(--warn)}.tag.ok{background:var(--okbg);color:var(--ok)}
+.tablewrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+th,td.nw,td.num{white-space:nowrap}
+th{font-size:12px;color:var(--mut);font-weight:600}
+tr:last-child td{border-bottom:0}
+tr.down td:first-child{box-shadow:inset 3px 0 0 var(--bad)}tr.warn td:first-child{box-shadow:inset 3px 0 0 var(--warnf)}
+td.det{color:var(--mut);font-size:13px;min-width:170px;max-width:270px}
+td:first-child{min-width:240px}
+.dm{font-size:12px;color:var(--mut);margin-top:2px}.dm a{color:var(--acc);text-decoration:none}.dm a:hover{text-decoration:underline}
+.strip i{width:5px}
+@media screen and (max-width:1000px){.c-da{display:none}}
+@media screen and (max-width:900px){.c-ms{display:none}}
+@media screen and (max-width:820px){.c-tr{display:none}}
+.num{text-align:right}
+.wl{color:var(--acc);text-decoration:none}.wl:hover{text-decoration:underline}
+.strip{display:inline-flex;gap:2px;vertical-align:middle}
+.strip i{display:block;width:6px;height:18px;border-radius:2px;background:var(--none)}
+.strip i.ok{background:var(--okf)}.strip i.warn{background:var(--warnf)}.strip i.down{background:var(--bad)}
+.age{font-weight:600}.age.ok{color:var(--ok)}.age.warn{color:var(--warn)}.age.bad{color:var(--bad)}
+.legend{font-size:12px;color:var(--mut);display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.empty{color:var(--mut)}
+.err{color:var(--bad)}
+.mb{display:none}
+@media screen and (max-width:640px){
+  :root{--ink:#000;--mut:#4b5563}:root[data-theme="dark"]{--ink:#fff;--mut:#cbd5e1}
+  body{font-weight:500}
+  main{padding:12px 10px 40px}
+  h1{font-size:clamp(22px,6vw,30px)}
+  .kpis{grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+  .kpi{padding:8px 9px}.kpi b{font-size:19px}.kpi span{font-size:11px;line-height:1.2;display:block}
+  .tablewrap{overflow:visible;border-radius:8px}
+  table{min-width:0;font-size:12.5px}
+  th,td{padding:7px 5px}
+  .hm{display:none}.mb{display:block}
+  td:first-child{white-space:normal;padding-left:8px}
+  .strip i{width:4px;height:16px}.strip{gap:1px}
+  .btn{font-size:12.5px;padding:5px 9px}
+}
+body.locked main{display:none}body:not(.locked) #gate{display:none}
+#gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+#gateForm{display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px;visibility:hidden}
+#gateForm input[type=password]{font:inherit;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+#gateForm label{display:flex;gap:6px;align-items:center}
+.sslbad{color:var(--bad);font-weight:700}
+.info{position:relative;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;margin-left:6px;border-radius:50%;border:1px solid var(--mut);color:var(--mut);font:600 11px/1 Georgia,serif;font-style:italic;cursor:help;vertical-align:1px}
+.info:hover,.info:focus{color:var(--acc);border-color:var(--acc);outline:none}
+.info .tip{display:none;position:fixed;z-index:20;width:min(300px,calc(100vw - 32px));padding:10px 12px;border-radius:8px;background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.25);font:400 12.5px/1.45 system-ui,sans-serif;font-style:normal;text-align:left;white-space:normal}
+.info:hover .tip,.info:focus .tip{display:block}
+@media print{.info{display:none}}
+@media print{
+  :root,:root[data-theme]{--bg:#fff;--card:#fff;--ink:#000;--mut:#4b5563;--line:#d1d5db;color-scheme:light}
+  .tools{display:none}.tablewrap{overflow:visible}table{min-width:0;font-size:11px}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+
+.xr>td{padding:0;border-top:0}.xb{padding:12px 14px 16px;background:var(--bg);border-top:1px dashed var(--line)}
+.xh{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:13px;color:var(--mut)}.xh .btn{padding:3px 10px;font-size:12px}
+.nm{cursor:pointer;color:var(--acc);font:inherit;background:none;border:0;padding:0;text-align:left}.nm:hover{text-decoration:underline}.nm:before{content:"\25B8";display:inline-block;margin-right:5px;color:var(--mut);transition:transform .15s}.nm[aria-expanded=true]:before{transform:rotate(90deg)}
+.ext{margin-left:6px;color:var(--mut);text-decoration:none;font-size:12px}.ext:hover{color:var(--acc)}
+.av{display:flex;gap:2px;height:70px}.av i{flex:1;min-width:2px;max-width:40px;display:block;border-radius:2px;background:var(--none);position:relative;overflow:hidden}.av i b{position:absolute;left:0;right:0;bottom:0;background:var(--okf)}.av i u{position:absolute;left:0;right:0;top:0;background:var(--bad)}
+.ax{display:flex;justify-content:space-between;font-size:11px;color:var(--mut);margin:3px 0 10px}
+.rt{width:100%;height:60px;display:block;background:var(--card);border:1px solid var(--line);border-radius:6px}.rt polyline{fill:none;stroke:var(--acc);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.xs{font-size:12px;color:var(--mut);margin:4px 0 8px}.xo{font-size:13px;margin:0;padding-left:18px}.xo li{margin:2px 0}
+tr.mr{cursor:pointer;scroll-margin-top:16px}tr.mr:hover td{background:color-mix(in srgb,var(--acc) 5%,transparent)}tr.mr.op td{background:color-mix(in srgb,var(--acc) 8%,transparent)}.xr .xb,.xr .xb *{cursor:auto}.xr .btn{cursor:pointer}
+.goto{cursor:pointer}.goto:hover{border-color:var(--acc)}
+.lg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-bottom:8px}.lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}.lg .g{background:var(--okf)}.lg .r{background:var(--bad)}.lg .n{background:var(--none)}
+.rw{position:relative}.dt{position:absolute;width:8px;height:8px;margin:0 0 -4px -4px;border-radius:50%;background:var(--acc);border:2px solid var(--card);box-sizing:content-box}
+.bi{width:16px;height:16px;margin-right:8px;vertical-align:-3px;flex:none}tr.mr .bi{color:var(--ink)}
+.late{margin-top:6px;padding:6px 10px;border-radius:8px;background:var(--warnbg);color:var(--warn);font-size:13px;display:inline-block}
+</style>
+</head>
+<body class="locked">
+<div id="gate"><form id="gateForm" autocomplete="off">
+  <h1>Servizi Monitor</h1>
+  <div class="sub">Area riservata. Inserisci la password.</div>
+  <input id="gatePw" type="password" placeholder="Password" autocomplete="current-password">
+  <button class="btn" type="submit">Entra</button>
+  <label class="sub"><input id="gateKeep" type="checkbox" checked> Ricorda su questo dispositivo</label>
+  <div id="gateErr" class="err"></div>
+</form></div>
+<main>
+  <div class="top">
+    <div>
+      <h1>Servizi Monitor</h1>
+      <div class="sub">Siti, biglietterie e servizi online</div>
+      <div class="sub" id="ageline">Caricamento&hellip;</div>
+    </div>
+    <div class="tools">
+      <button class="btn" id="fprob" aria-pressed="false">Solo problemi</button>
+      <button class="btn" id="theme" type="button" title="Cambia tema (il tema chiaro è pensato anche per la stampa)">☾ Tema scuro</button>
+      <button class="btn" onclick="print()">Stampa</button>
+    </div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <h2>Da controllare</h2>
+  <div id="alerts"></div>
+
+  <div id="groups"></div>
+  <div class="legend">
+    <span><i class="sw" style="background:var(--okf)"></i>Online</span>
+    <span><i class="sw" style="background:var(--warnf)"></i>Avviso (lento, discontinuo, in scadenza, social non raggiungibile)</span>
+    <span><i class="sw" style="background:var(--bad)"></i>Offline / pagina vuota (confermato da 11 controlli in 30 min)</span>
+    <span>Barre: ultimi 24 controlli, il pi&ugrave; recente a destra</span>
+  </div>
+</main>
+<script>
+const LABEL = {ok: "Online", warn: "Avviso", down: "Offline"};
+const RANK = {down: 0, warn: 1, ok: 2};
+const $ = s => document.querySelector(s);
+const SSL_INFO = "Il certificato SSL d\u00e0 al sito il lucchetto HTTPS: se scade, il browser mostra \u201csito non sicuro\u201d. Di norma non lo rinnova l'utente n\u00e9 il webmaster: lo rinnova in automatico il provider dell'hosting (i certificati Let's Encrypt durano 90 giorni e si rinnovano circa 30 giorni prima). Bisogna agire solo se il rinnovo non avviene: la riga diventa rossa (\u201cSSL SCADUTO\u201d) solo quando il certificato \u00e8 davvero scaduto o non valido, e allora va contattato il provider.";
+const info = c => /SSL/.test(c.detail || "") ? `\u2060<span class="info" tabindex="0" role="button" aria-label="Informazioni sul certificato SSL">i<span class="tip" role="tooltip">${SSL_INFO}</span></span>` : "";
+const det = c => esc(c.detail).replace(/SSL (SCADUTO|NON VALIDO)/, '<span class="sslbad">SSL $1</span>');
+const fmtDay = s => s ? s.split("-").reverse().join("/") : "";
+const domLine = c => !c.domain ? "" : `<div class="dm">${c.domain_expires ? "Dominio scade il " + esc(fmtDay(c.domain_expires)) : "Scadenza dominio non disponibile"}
+  &middot; <a href="https://who.is/whois/${encodeURIComponent(c.domain)}" target="_blank" rel="noopener">whois</a>
+  &middot; <a href="https://downforeveryoneorjustme.com/${encodeURIComponent(c.host || c.domain)}" target="_blank" rel="noopener">&egrave; gi&ugrave;?</a></div>`;
+const ICONS = {"linktree": "<svg class=\"bi\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"#43E660\" d=\"m13.73635 5.85251 4.00467-4.11665 2.3248 2.3808-4.20064 4.00466h5.9085v3.30473h-5.9365l4.22865 4.10766-2.3248 2.3338L12.0005 12.099l-5.74052 5.76852-2.3248-2.3248 4.22864-4.10766h-5.9375V8.12132h5.9085L3.93417 4.11666l2.3248-2.3808 4.00468 4.11665V0h3.4727zm-3.4727 10.30614h3.4727V24h-3.4727z\"/></svg>", "facebook": "<svg class=\"bi\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"#1877F2\" d=\"M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z\"/></svg>", "instagram": "<svg class=\"bi\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"#E4405F\" d=\"M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077\"/></svg>", "tiktok": "<svg class=\"bi\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z\"/></svg>", "youtube": "<svg class=\"bi\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"#FF0000\" d=\"M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z\"/></svg>", "vimeo": "<svg class=\"bi\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"#1AB7EA\" d=\"M23.9765 6.4168c-.105 2.338-1.739 5.5429-4.894 9.6088-3.2679 4.247-6.0258 6.3699-8.2898 6.3699-1.409 0-2.578-1.294-3.553-3.881l-1.9179-7.1138c-.719-2.584-1.488-3.878-2.312-3.878-.179 0-.806.378-1.8809 1.132l-1.129-1.457a315.06 315.06 0 003.501-3.1279c1.579-1.368 2.765-2.085 3.5539-2.159 1.867-.18 3.016 1.1 3.447 3.838.465 2.953.789 4.789.971 5.5069.5389 2.45 1.1309 3.674 1.7759 3.674.502 0 1.256-.796 2.265-2.385 1.004-1.589 1.54-2.797 1.612-3.628.144-1.371-.395-2.061-1.614-2.061-.574 0-1.167.121-1.777.391 1.186-3.8679 3.434-5.7568 6.7619-5.6368 2.4729.06 3.6279 1.664 3.4929 4.7969z\"/></svg>", "whatsapp": "<svg class=\"bi\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"#25D366\" d=\"M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z\"/></svg>", "spotify": "<svg class=\"bi\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"#1DB954\" d=\"M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z\"/></svg>", "spreaker": "<svg class=\"bi\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"#F5C300\" d=\"M14.615 0l-5.64 6.54L.529 4.718l8.68 7.372-8.537 7.463 8.411-1.984L14.843 24l.71-8.601 7.918-3.483-7.963-3.33L14.621 0h-.006z\"/></svg>"};
+const IMAP = {fb: "facebook", ig: "instagram", yt: "youtube", "ig-sorsi": "instagram", "fb-dim": "facebook", "fb-vivaldi": "facebook"};
+const icon = c => c.group === "social" && ICONS[IMAP[c.id] || c.id] ? ICONS[IMAP[c.id] || c.id] : "";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const parseTs = ts => new Date(ts.replace(/Z$/, ":00Z"));
+const fmt = d => d.toLocaleString("it-IT", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"});
+function ago(d){
+  const m = Math.round((Date.now() - d) / 60000);
+  if (m < 60) return `${m} min fa`;
+  const h = Math.round(m / 60);
+  return h < 48 ? `${h} h fa` : `${Math.round(h / 24)} giorni fa`;
+}
+
+// tema: chiaro di default, ricordato nel browser
+try { const t = localStorage.getItem("sm-theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+// etichetta come Biglietti Monitor: indica il tema in cui si passa
+const themeLabel = () => $("#theme").textContent = document.documentElement.dataset.theme === "dark" ? "☀ Tema chiaro" : "☾ Tema scuro";
+themeLabel();
+$("#theme").onclick = () => {
+  const t = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem("sm-theme", t); } catch {}
+  themeLabel();
+};
+
+let onlyProblems = false;
+try { onlyProblems = localStorage.getItem("sm-prob") === "1"; } catch {}
+$("#fprob").onclick = () => {
+  onlyProblems = !onlyProblems;
+  try { localStorage.setItem("sm-prob", onlyProblems ? "1" : "0"); } catch {}
+  render();
+};
+
+let DATA = null, HIST = {};
+
+function parseCsv(text){
+  const rows = text.trim().split(/\r?\n/).slice(1);
+  const out = {};
+  for (const line of rows){
+    const cells = []; let cur = "", q = false;
+    for (let i = 0; i < line.length; i++){
+      const c = line[i];
+      if (q){ if (c === '"' && line[i+1] === '"'){ cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+      else if (c === '"') q = true; else if (c === ","){ cells.push(cur); cur = ""; } else cur += c;
+    }
+    cells.push(cur);
+    const [ts, id, state, ms] = cells;
+    (out[id] ||= []).push({ts, state, ms});
+  }
+  return out;
+}
+
+function uptime(h){
+  const cutoff = Date.now() - 7 * 864e5;
+  const recent = (h || []).filter(r => parseTs(r.ts) >= cutoff);
+  if (!recent.length) return "–";
+  const up = recent.filter(r => r.state !== "down").length;
+  return (100 * up / recent.length).toFixed(up === recent.length ? 0 : 1) + "%";
+}
+
+function strip(h){
+  const last = (h || []).slice(-24);
+  const pad = Array(24 - last.length).fill('<i></i>').join("");
+  return `<span class="strip">${pad}${last.map(r => `<i class="${r.state}" title="${esc(fmt(parseTs(r.ts)))}: ${LABEL[r.state]}"></i>`).join("")}</span>`;
+}
+
+
+const OPEN = new Set(); let RANGE = 30;
+const dayKey = d => d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+function outages(h){
+  const out = []; let cur = null;
+  for (const r of h) {
+    const t = parseTs(r.ts);
+    if (r.state === "down") { if (!cur) cur = {from: t, to: t}; cur.to = t; }
+    else if (cur) { cur.end = t; out.push(cur); cur = null; }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+function dur(ms){ const m = Math.max(1, Math.round(ms/60000)); return m < 60 ? m + " min" : m < 1440 ? Math.round(m/60) + " h" : Math.round(m/1440) + " g"; }
+function detail(id){
+  const h = HIST[id] || [];
+  if (!h.length) return `<div class="xs">Nessun dato.</div>`;
+  const first = parseTs(h[0].ts), today = new Date(); today.setHours(0,0,0,0);
+  let from = RANGE ? new Date(today.getTime() - (RANGE-1)*864e5) : new Date(first.getFullYear(), first.getMonth(), first.getDate());
+  if (from < new Date(first.getFullYear(), first.getMonth(), first.getDate())) from = new Date(first.getFullYear(), first.getMonth(), first.getDate());
+  const days = [];
+  for (let d = new Date(from); d <= today; d.setDate(d.getDate()+1)) days.push(dayKey(d));
+  const agg = {};
+  for (const r of h) { const k = dayKey(parseTs(r.ts)); const a = agg[k] ||= {n:0, up:0, ms:0, nm:0};
+    a.n++; if (r.state !== "down") a.up++; if (r.state === "ok" && r.ms) { a.ms += +r.ms; a.nm++; } }
+  const fd = k => k.split("-").reverse().join("/");
+  const bars = days.map(k => { const a = agg[k];
+    if (!a) return `<i title="${fd(k)}: nessun dato"></i>`;
+    const p = 100*a.up/a.n;
+    return `<i title="${fd(k)}: ${p.toFixed(p===100?0:1)}% online (${a.n} controlli)"><b style="height:${p}%"></b><u style="height:${100-p}%"></u></i>`; }).join("");
+  const pts = days.map((k,i) => agg[k] && agg[k].nm ? [i, agg[k].ms/agg[k].nm] : null).filter(Boolean);
+  const mx = Math.max(1000, ...pts.map(p => p[1])), n = Math.max(1, days.length-1);
+  const dots = pts.map(p => `<span class="dt" style="left:${(100*p[0]/n).toFixed(2)}%;bottom:${(4+90*p[1]/mx).toFixed(1)}%" title="${fd(days[p[0]])}: ${(p[1]/1000).toFixed(2)} s"></span>`).join("");
+  const line = pts.length ? `<polyline points="${pts.map(p => (100*p[0]/n).toFixed(2)+","+(58-54*p[1]/mx).toFixed(1)).join(" ")}"/>` : "";
+  const inRange = h.filter(r => days.includes(dayKey(parseTs(r.ts))));
+  const up = inRange.filter(r => r.state !== "down").length;
+  const pct = inRange.length ? (100*up/inRange.length).toFixed(up===inRange.length?0:2) + "%" : "–";
+  const outs = outages(inRange).reverse().slice(0, 10);
+  const lst = outs.length ? `<ol class="xo">${outs.map(o => `<li>${esc(fmt(o.from))} &rarr; ${o.end ? esc(fmt(o.end)) : "<b>in corso</b>"} &middot; ${dur((o.end || new Date()) - o.from)}</li>`).join("")}</ol>` : `<div class="xs">Nessuna interruzione nel periodo.</div>`;
+  const btn = (v, l) => `<button class="btn" data-range="${v}" aria-pressed="${RANGE===v}">${l}</button>`;
+  return `<div class="xh">${btn(7,"7 giorni")}${btn(30,"30 giorni")}${btn(90,"90 giorni")}${btn(0,"Tutto")}<span>Online nel periodo: <b>${pct}</b></span></div>
+    <div class="lg"><span><i class="g"></i>online</span><span><i class="r"></i>offline</span><span><i class="n"></i>nessun dato</span><span>Ogni colonna = 1 giorno</span></div>
+    <div class="av">${bars}</div><div class="ax"><span>${fd(days[0])}</span><span>${fd(days[days.length-1])}</span></div>
+    <div class="xs">Tempo medio di risposta giornaliero (max ${(mx/1000).toFixed(1)} s)</div>
+    <div class="rw"><svg class="rt" viewBox="0 0 100 60" preserveAspectRatio="none">${line}</svg>${dots}</div>
+    <div class="xs" style="margin-top:10px">Interruzioni (ultime 10)</div>${lst}`;
+}
+document.addEventListener("click", e => {
+  const rb = e.target.closest("[data-range]"), tr = e.target.closest("tr.mr"), g = e.target.closest("[data-goto]");
+  if (g && !e.target.closest("a")) { OPEN.clear(); OPEN.add(g.dataset.goto); render();
+    const r = document.querySelector(`tr.mr[data-id="${g.dataset.goto}"]`); if (r) r.scrollIntoView({behavior: "smooth", block: "start"}); }
+  else if (rb) { RANGE = +rb.dataset.range; render(); }
+  else if (tr && !e.target.closest("a,button,.info")) { const id = tr.dataset.id, was = OPEN.has(id); OPEN.clear(); if (!was) OPEN.add(id); render(); }
+});
+
+function render(){
+  const {ts, groups, checks} = DATA;
+  const t = parseTs(ts), mins = (Date.now() - t) / 60000;
+  const cls = mins < 75 ? "ok" : mins < 180 ? "warn" : "bad";  // controlli ogni 30 min (+30 min se c'e' da confermare)
+  $("#ageline").innerHTML = `Ultimo controllo: <span class="age ${cls}">${fmt(t)} (${ago(t)})</span>${mins >= 75 ? `<div class="late">&#9888; Controllo in ritardo: GitHub non ha avviato l&rsquo;esecuzione programmata (succede nei momenti di carico). I dati mostrati potrebbero non essere aggiornati.</div>` : ""}`;
+
+  const n = s => checks.filter(c => c.state === s).length;
+  $("#kpis").innerHTML = [
+    ["", checks.length, "Servizi"], ["ok", n("ok"), "Online"],
+    ["warn", n("warn"), "Avvisi"], ["bad", n("down"), "Offline"],
+  ].map(([c, v, l]) => `<div class="kpi ${c}"><b>${v}</b><span>${l}</span></div>`).join("");
+
+  const probs = checks.filter(c => c.state !== "ok").sort((a, b) => RANK[a.state] - RANK[b.state]);
+  $("#alerts").innerHTML = probs.length ? probs.map(c => `
+    <div class="card alert goto ${c.state === "warn" ? "warn" : ""}" data-goto="${esc(c.id)}">
+      <div><b>${esc(c.name)}</b> <span class="tag ${c.state}">${LABEL[c.state]}</span>
+        <div class="d">${det(c)} &middot; da ${esc(fmt(parseTs(c.since)))}</div>${domLine(c)}</div>
+      <a class="wl" href="${esc(c.url)}" target="_blank" rel="noopener">Apri &rarr;</a>
+    </div>`).join("") : `<div class="card empty">Tutto online.</div>`;
+
+  $("#fprob").setAttribute("aria-pressed", onlyProblems);
+  $("#groups").innerHTML = Object.entries(groups).map(([gid, gname]) => {
+    let rows = checks.filter(c => c.group === gid);
+    if (onlyProblems) rows = rows.filter(c => c.state !== "ok");
+    if (!rows.length) return "";
+    const bad = rows.filter(c => c.state === "down").length;
+    return `<h2>${esc(gname)} ${bad ? `<span class="tag down">${bad} offline</span>` : ""}</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Servizio</th><th>Stato</th><th class="hm">Dettaglio</th><th class="num hm c-ms">Risposta</th><th class="num">7 giorni</th><th class="hm c-tr">Andamento</th><th class="hm c-da">Da</th></tr></thead>
+      <tbody>${rows.map(c => `<tr class="mr ${c.state}${OPEN.has(c.id) ? " op" : ""}" data-id="${esc(c.id)}">
+        <td>${icon(c)}<a class="wl" href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a>
+          ${domLine(c)}<span class="sub mb">${det(c)}${info(c)}</span></td>
+        <td class="nw"><span class="tag ${c.state}">${LABEL[c.state]}</span></td>
+        <td class="det hm">${det(c)}${info(c)}</td>
+        <td class="num hm c-ms">${c.ms == null ? "–" : (c.ms / 1000).toFixed(1) + " s"}</td>
+        <td class="num">${uptime(HIST[c.id])}</td>
+        <td class="hm c-tr">${strip(HIST[c.id])}</td>
+        <td class="hm c-da nw">${esc(fmt(parseTs(c.since)))}</td>
+      </tr>${OPEN.has(c.id) ? `<tr class="xr"><td colspan="7"><div class="xb">${detail(c.id)}</div></td></tr>` : ""}`).join("")}</tbody></table></div>`;
+  }).join("");
+}
+
+// Pubblicato: la pagina legge solo data.enc.json (AES-GCM, chiave PBKDF2 dalla password, come Biglietti Monitor).
+// In locale, senza quel file, legge data/status.json e data/history.csv in chiaro.
+const b64 = b => { let s = ""; new Uint8Array(b).forEach(x => s += String.fromCharCode(x)); return btoa(s); };
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const gunzip = buf => new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
+async function keyFromPassword(pw, enc){
+  const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({name: "PBKDF2", hash: "SHA-256", iterations: enc.iter, salt: unb64(enc.salt)},
+    k, {name: "AES-GCM", length: 256}, true, ["decrypt"]);
+}
+async function decryptData(key, enc){
+  const pt = await crypto.subtle.decrypt({name: "AES-GCM", iv: unb64(enc.iv)}, key, unb64(enc.ct));
+  return JSON.parse(new TextDecoder().decode(await gunzip(pt)));
+}
+async function plainData(){
+  const [s, h] = await Promise.all([
+    fetch("data/status.json", {cache: "no-store"}),
+    fetch("data/history.csv", {cache: "no-store"}),
+  ]);
+  if (!s.ok) throw new Error(`status.json: HTTP ${s.status}`);
+  return {status: await s.json(), history: h.ok ? await h.text() : ""};
+}
+// tooltip (i): posizione fissa, cosi' non viene tagliato dalle tabelle scorrevoli
+function placeTip(e){
+  const i = e.target.closest && e.target.closest(".info"); if (!i) return;
+  const tip = i.querySelector(".tip"), r = i.getBoundingClientRect();
+  tip.style.display = "block";
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.max(16, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 16)) + "px";
+  tip.style.top = (r.bottom + 8 + h > innerHeight ? r.top - 8 - h : r.bottom + 8) + "px";
+  tip.style.display = "";
+}
+document.addEventListener("mouseover", placeTip);
+document.addEventListener("focusin", placeTip);
+addEventListener("scroll", () => document.activeElement?.classList?.contains("info") && document.activeElement.blur(), true);
+
+function unlock(D){
+  document.body.classList.remove("locked");
+  DATA = D.status;
+  if (D.history) HIST = parseCsv(D.history);
+  render();
+}
+(async () => {
+  const form = $("#gateForm"), err = $("#gateErr");
+  let enc = null;
+  try { const r = await fetch("data.enc.json", {cache: "no-store"}); if (r.ok) enc = await r.json(); } catch {}
+  if (!enc) {
+    try { unlock(await plainData()); }
+    catch (e) { document.body.classList.remove("locked"); $("#ageline").innerHTML = `<span class="err">Dati non disponibili (${esc(e.message)})</span>`; }
+    return;
+  }
+  try {
+    const saved = localStorage.getItem("sm-key");
+    if (saved) { unlock(await decryptData(await crypto.subtle.importKey("raw", unb64(saved), "AES-GCM", true, ["decrypt"]), enc)); return; }
+  } catch { try { localStorage.removeItem("sm-key"); } catch {} }
+  form.style.visibility = "visible"; $("#gatePw").focus();
+  form.addEventListener("submit", async e => {
+    e.preventDefault(); err.textContent = "Verifica\u2026";
+    try {
+      const key = await keyFromPassword($("#gatePw").value, enc), D = await decryptData(key, enc);
+      try { if ($("#gateKeep").checked) localStorage.setItem("sm-key", b64(await crypto.subtle.exportKey("raw", key))); } catch {}
+      err.textContent = ""; unlock(D);
+    } catch (x) {
+      err.textContent = x && x.name === "OperationError" ? "Password errata" : "Errore: " + (x && x.message || x);
+      $("#gatePw").select();
+    }
+  });
+})();
+</script>
+</body>
+</html>
